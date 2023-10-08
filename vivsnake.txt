@@ -1,0 +1,112 @@
+ 
+10 REM Snake using a circular que to store snake body positions
+20 REM so we only need to draw a new head and erase the old tail each loop cycle.
+30 REM This also lets us look at what is already on the screen
+40 REM to see if we hit something, so we can add obstacles etc. 
+50 REM Running time will stay constant as the snake gets longer too.
+60 REM ONERR GOTO 6000 : REM end the game if something breaks (say, out of bounds)
+
+70 LET ML = 200 : REM Max snake length. You win if you manage to grow this long.
+80 DIM SX(ML): DIM SY(ML) : REM Circular queue for where the snake has been
+
+100 GR : HOME : REM Clear the screen
+
+110 PRINT "VIV'S SNAKE. Use W A S D to move."
+120 PRINT "Dodge white rocks and eat red apples to grow and win!"
+
+130 GOSUB 4000 : REM Add rocks
+140 LET X = 15 : LET Y = 15 : REM Snake head start position
+150 LET DX = 0 : LET DY = 0 : REM Snake movement direction
+160 COLOR=5 : PLOT  X, Y : REM DRAW SNAKE HEAD
+170 IF DX = 0 AND DY = 0 THEN GOSUB 2000: N = RND(1): GOTO 170 :REM consume randoms while waiting for a direction key to start
+180 GOSUB 3000 : REM Add an apple
+
+190 LET L = 2: SX(0)=X: SY(0)= Y : REM Starting snake length
+200 REM Theres no mod function so we have to use MOD(N,D) = N-INT(N/D)*D 
+210 REM to get the tail index of the snake which will be L indexes behind the head.
+220 LET TL = 0 : REM array index for middle of snake 
+
+230 REM MAIN LOOP START
+240 LET HD = (TL + L) - INT((TL + L) / ML)*ML   : REM calc array index for Current head of snake 
+250 REM PRINT HD; " ";TL : REM Debug que indexes for ehad and tail
+260 GOSUB 2000 : REM GET Keyboard input
+270 X = X + DX : Y = Y + DY : REM Update snake head position
+280 IF X < 0 OR X >= 40 GOTO 6000 : REM Check screen boundary constraints
+290 IF Y < 0 OR Y >= 40 GOTO 6000 : REM Check screen boundary constraints
+300 P = SCRN (X,Y) :REM See if we hit anything before overdrawing it
+
+310 SX(HD) = X : SY(HD) = Y : REM Store new snake head position
+320 COLOR=5 : PLOT  SX(HD), SY(HD) : REM DRAW SNAKE HEAD
+330 COLOR=4 : PLOT  SX(MD), SY(MD) : MD = HD : REM DRAW SNAKE BODY and update its index
+340 COLOR=0 : PLOT  SX(TL), SY(TL) : REM ERASE SNAKE TAIL 
+350 REM PRINT P : REM DEBUG collision testing
+360 IF P = 1 THEN GOSUB 3500 : REM Eat an apple
+370 IF P = 4 THEN DEATH$ = "You BIT yourself!" : GOTO 6000 : REM END of Game
+380 IF P = 15 THEN DEATH$ = "You Hit a rock!" : GOTO 6000 : REM END of Game
+390 GOSUB 1000 : REM Wait for a bit
+400 TL = TL + 1: IF TL >= ML THEN TL = 0 : REM move the tail index in the circular que
+410 GOTO 230 : REM GOTO MAIN LOOP START
+
+1000 REM DELAY LOOP - Adjust this slow the game down
+1010 FOR I = 1 to 500 : NEXT I
+1020 RETURN
+
+2000 REM non-blocking Keyboard input for movement.
+2010 LET K = PEEK(49152) 
+2020 REM This is a kinder snake game. You can't directly double back on yourself.
+2020 IF K = 193 AND DX <> 1 THEN DX = -1:DY = 0 : REM A -> go left
+2030 IF K = 196 AND DX <> -1 THEN DX =  1:DY = 0 : REM D -> go right
+2040 IF K = 215 AND DY <> 1 THEN DX =  0:DY = -1 : REM W -> go up
+2050 IF K = 211 AND DY <> -1 THEN DX =  0:DY =  1 : REM S -> go down
+2055 REM PRINT "K";K;" DX";DX;" DY";DY
+2060 RETURN
+
+3000 REM Subroutine to find an empty screen spot and add an apple using color 1
+3001 REM If an empty spot cant be found after 3000 attempts, player won.
+3010 FOR I = 1 to 3000
+3020 LET RX = RND(1)*40: LET RY = RND(1)*40
+3030 IF SCRN (RX,RY) = 0 THEN COLOR = 1: PLOT RX,RY : RETURN
+3040 NEXT I
+3050 PRINT "YOU WON!": END
+
+3500 REM Subroutine to eat an apple - score and add a new apple
+3510 LET L = L + 1
+3520 HOME
+3530 PRINT "You ATE an APPLE. Growing..." 
+3540 PRINT "SCORE: "; L-2
+3550 FOR I = 1 to 3000 : NEXT I : REM Pause for a small bit after eating
+3560 IF L = ML THEN PRINT "MAX SNAKE Length reached. You won!" : END
+
+3570 GOSUB 3000
+3580 RETURN
+
+4000 REM Add random rocks snake can collide with
+4010 FOR I = 1 to 10
+4020 LET RX = RND(1) * 40 : LET RY = RND(1) * 40
+4030 IF SCRN (RX,RY) = 0 THEN COLOR = 15: PLOT RX,RY
+4040 NEXT I
+4050 RETURN
+
+
+5000 REM WriteScreen, with cx,cy,ch being used as parameters for x,y, char to write
+5010 LET Addr = 1024 + cy * 80 + cx: let d = ASC("A")
+5020 if (Addr < 1024 or Addr > 1024 + 40*80) THEN RETURN: REM guard to only write to text
+5030 CH = SCRN (CX,CY)
+5040 RETURN
+
+
+6000 REM END of game
+6010 HOME 
+6020 PRINT DEATH$
+6030 PRINT "You Died! Game over!"
+6040 PRINT "Score:";L-2
+6050 INPUT "Press ENTER to play again"; C$
+6060 FOR I = 0 to ML : SX(I) = 0:SY(I) = 0:NEXT I
+6070 GOTO 100
+
+
+
+
+
+
+
